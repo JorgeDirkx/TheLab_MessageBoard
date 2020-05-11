@@ -1,6 +1,8 @@
 package com.jorgedirkx.messageboard.servlet;
 
+import com.jorgedirkx.messageboard.dao.MessageDao;
 import com.jorgedirkx.messageboard.dao.MessageDaoImpl;
+import com.jorgedirkx.messageboard.model.Message;
 import javafx.beans.binding.ListExpression;
 
 import javax.servlet.ServletException;
@@ -10,68 +12,73 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.ListIterator;
 
-@WebServlet("/messageboard")
+@WebServlet("/")
 public class MessageBoardServlet extends HttpServlet {
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("text/html");
-        resp.setCharacterEncoding("UTF-8");
-        PrintWriter writer =resp.getWriter();
-        writer.println("<html>" +
-                "<head><title>Message Board</title></head>" +
-                "<body>" +
-                "<form method='post'>"+
-                "<label for=\"name\">Name</label>"+
-                "<input id=\"name\" name=\"name\" type=\"text\" placeholder=\"enter your name\" required>"+
-                "<label for=\"message\">Message</label>"+
-                "<input id=\"message\" name=\"message\" type=\"text\" placeholder=\"enter your message\"required>"+
-                //when the submit button is pressed, 'post' form will activate doPost method
-                //and will return response to client
-                "<button type=\"submit\">post your message</button>"+
-                "</form>"+
-                "</body>"+
-                "</hmtl>");
-        writer.close();
-    }
-
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("text/html");
-        resp.setCharacterEncoding("UTF-8");
-        PrintWriter writer =resp.getWriter();
-        writer.println("<html>" +
-                "<head><title>Message Posted</title></head>" +
-                "<body><h1>" +
-                "Message posted by: " +
-                req.getParameter("name") +
-                "</h1></body>" +
-                "</hmtl>");
-        writer.close();
-    }
+    private MessageDao messageDao;
 
     @Override
     public void init() throws ServletException {
         try {
             Class.forName("org.mariadb.jdbc.Driver");
-            MessageDaoImpl messageDao = new MessageDaoImpl(
-                    "jdbc:mariadb://noelvaes.eu/StudentDB",
-                    "student",
-                    "student123"
-            );
-
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
+        }
+        messageDao = new MessageDaoImpl("jdbc:mariadb://noelvaes.eu/StudentDB",
+                "student","student123" );
+
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setContentType("text/html");
+        response.setCharacterEncoding("UTF-8");
+        try(PrintWriter out = response.getWriter()){
+            out.println("<!DOCTYPE html>");
+            out.println("<html>");
+            out.println("<head>");
+            out.println("<title>guestbook servlet</title>");
+            out.println("</head>");
+            out.println("<body>");
+            out.println("<h1>");
+            out.println("Messages</h1>");
+            List<Message> messages = messageDao.getAllMessages();
+            for (Message message:
+                    messages) {
+                out.println("<p>"+ message.getName() +"</p>");
+                out.println("<p>"+ message.getMessage() +"</p>");
+                out.println("<p>"+ message.getDate() +"</p>");
+            }
+            out.println("<form method='post' action=''>");
+            out.println("<p>please enter name:</p>\n" +
+                    "name: <input type=\"text\" name=\"name\">\n" +
+                    "message: <input type=\"textarea\" name=\"message\">\n" +
+                    "    <input type=\"submit\" value=\"okidoki!\">");
+            out.println("</form>");
+            out.println("</body>");
+            out.println("</html>");
+        }
+        catch(IOException ex){
+            System.out.println("exception during writing procedure");
+            throw ex;
         }
     }
 
     @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        LocalDateTime dateTime = LocalDateTime.now();
+        String name = req.getParameter("name");
+        String message = req.getParameter("message");
+        messageDao.createMessage(new Message(dateTime,name,message));
+        resp.sendRedirect("");
+    }
+
+    @Override
     public void destroy() {
-        MessageDaoImpl messageDao = null;
-        messageDao.closeConnection();
+        ((MessageDaoImpl)messageDao).closeConnection();
     }
 }
-

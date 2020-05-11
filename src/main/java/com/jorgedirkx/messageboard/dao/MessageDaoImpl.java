@@ -3,85 +3,76 @@ package com.jorgedirkx.messageboard.dao;
 import com.jorgedirkx.messageboard.model.Message;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MessageDaoImpl implements MessageDao {
 
     private String url;
-
     private String user;
-
     private String password;
-
     private Connection connection;
+    private final String createStatement = "INSERT INTO GuestBook(Date,Name,Message) VALUES (?,?,?)";
 
     public MessageDaoImpl(String url, String user, String password) {
         this.url = url;
         this.user = user;
         this.password = password;
-        this.connection = getConnection(url, user, password);
+        connection = getConnection();
     }
 
     @Override
     public List<Message> getAllMessages() {
         List<Message> messages = new ArrayList<>();
-        try(PreparedStatement preparedStatement =
-                    connection.prepareStatement("SELECT * FROM StudentDB.GuestBook")) {
-            try(ResultSet resultSet = preparedStatement.executeQuery()){
-                while (resultSet.next()){
-                    Message message = new Message();
-                    message.setId(resultSet.getInt(1));
-                    message.setDate(resultSet.getDate(2));
-                    message.setName(resultSet.getString(3));
-                    message.setMessage(resultSet.getString(4));
-
-                    messages.add(message);
-                }
+        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM GuestBook")) {
+            ResultSet result = statement.executeQuery();
+            while (result.next()) {
+                //read out result
+                LocalDateTime dateTime = result.getTimestamp("date").toLocalDateTime();
+                String name = result.getString("name");
+                String message = result.getString("message");
+                Message messageObject = new Message(dateTime, name, message);
+                messages.add(messageObject);
             }
-
-        }catch (SQLException se) {
-            System.out.println(se.getMessage());
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
-
         return messages;
     }
 
     @Override
     public void createMessage(Message message) {
-        try(PreparedStatement preparedStatement =
-                    connection.prepareStatement(
-                            "INSERT INTO StudentDB.GuestBook(Date, Name, Message) " +
-                                    "VALUES(?,?,?)")
-        ){
-            preparedStatement.setDate(1, (Date) message.getDate());
-            preparedStatement.setString(2, message.getName());
-            preparedStatement.setString(3, message.getMessage());
-            preparedStatement.execute();
-
-        }catch (SQLException se){
-            System.out.println(se.getMessage());
+        try (PreparedStatement statement = connection.prepareStatement(createStatement)) {
+            statement.setTimestamp(1, Timestamp.valueOf(message.getDate()));
+            statement.setString(2, message.getName());
+            statement.setString(3, message.getMessage());
+            statement.execute();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
 
     }
 
-    @Override
-    public Connection getConnection(String url, String user, String password) {
-        try {
-            Connection conn = DriverManager.getConnection(url, user, password);
-            return conn;
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public Connection getConnection() {
+        if (connection == null) {
+            try {
+                connection = DriverManager.getConnection(url, user, password);
+            } catch (SQLException e) {
+                System.out.println("Er is iets foutgegaan tijdens het aanmaken van een connection");
+                e.printStackTrace();
+            }
         }
-        return null;
+        return connection;
     }
 
-    @Override
     public void closeConnection() {
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

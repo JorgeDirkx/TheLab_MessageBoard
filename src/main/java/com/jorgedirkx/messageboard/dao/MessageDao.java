@@ -11,7 +11,4 @@ public interface MessageDao {
 
     void createMessage(Message message);
 
-    Connection getConnection(String url, String user, String password);
-
-    void closeConnection();
 }

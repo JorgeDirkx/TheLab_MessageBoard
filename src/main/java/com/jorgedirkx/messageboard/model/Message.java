@@ -1,31 +1,33 @@
 package com.jorgedirkx.messageboard.model;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 public class Message {
 
-
-    private int Id;
-
-    private Date date;
-
+    private LocalDateTime date;
     private String name;
-
     private String message;
 
-    public int getId() {
-        return Id;
+    public Message() {
     }
 
-    public void setId(int id) {
-        Id = id;
+    public Message(String name, String message) {
+        this.name = name;
+        this.message = message;
     }
 
-    public Date getDate() {
+    public Message(LocalDateTime date, String name, String message) {
+        this.date = date;
+        this.name = name;
+        this.message = message;
+    }
+
+    public LocalDateTime getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(LocalDateTime date) {
         this.date = date;
     }
 
